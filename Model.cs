@@ -1,16 +1,26 @@
 ﻿
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace ObjToMtrxMesh
 {
     public class Model
     {
+        private List<Vector3> Vertices;
+        private List<Triangle> Triangles;
+        private Dictionary<string, Material> Materials;
+        private Material CurrentMaterial;
 
-        public void Process(string srcPath, string dstPath)
+        public Model()
         {
-            var lines = File.ReadAllLines(srcPath);
-            var vertices = new List<Vector3>();
-            var triangles = new List<Triangle>();
+            Vertices = new List<Vector3>();
+            Triangles = new List<Triangle>();
+            Materials = new Dictionary<string, Material>();
+        }
+
+        public void LoadObj(string objPath)
+        {
+            var lines = File.ReadAllLines(objPath);
             foreach (var line in lines)
             {
                 var arr = line.Split(' ');
@@ -19,9 +29,9 @@ namespace ObjToMtrxMesh
                     var x = float.Parse(arr[1].Replace('.', ','));
                     var y = float.Parse(arr[2].Replace('.', ','));
                     var z = float.Parse(arr[3].Replace('.', ','));
-                    vertices.Add(new Vector3(x, y, z));
+                    Vertices.Add(new Vector3(x, y, z));
                 }
-
+                
                 if (arr[0] == "f")
                 {
                     var list = new List<int>();
@@ -29,15 +39,43 @@ namespace ObjToMtrxMesh
                     {
                         list.Add(int.Parse(arr[i].Split('/')[0]) - 1);
                     }
-                    triangles.Add(new Triangle(list));
+                    Triangles.Add(new Triangle(list));
+                }
+
+                if (arr[0] == "mtllib")
+                {
+                    var directoryPath = new FileInfo(objPath).Directory.FullName;
+                    var mtlPath = Path.Combine(directoryPath, arr[1]);
+                    LoadMaterialLibrary(mtlPath);
+                }
+
+                if (arr[0] == "usemtl")
+                {
+                    CurrentMaterial = Materials[arr[1]];
                 }
             }
-
-            var text = ToText(vertices, triangles);
-            File.WriteAllText(dstPath, text);
         }
 
-        public string ToText(List<Vector3> vertices, List<Triangle> triangles)
+        public void LoadMaterialLibrary(string mtlPath)
+        {
+            Material current = null;   
+            foreach (var line in File.ReadAllLines(mtlPath))
+            {
+                var arr = line.Split(' ');
+                if (arr[0] == "newmtl")
+                {
+                    var name = arr[1];
+                    current = new Material(name);
+                    Materials.Add(name, current);
+                }
+                else if (current != null)
+                {
+                    current.ProcessLine(arr);
+                }
+            }
+        }
+
+        public void SaveMtrxMesh(string dstPath)
         {
             var builder = new StringBuilder();
             var offset = 0;
@@ -52,7 +90,7 @@ namespace ObjToMtrxMesh
 
             AddLine("this.vertices = [");
             offset++;
-            foreach (var v in vertices)
+            foreach (var v in Vertices)
             {
                 AddLine(v.ToString() + ",");
             }
@@ -61,14 +99,14 @@ namespace ObjToMtrxMesh
 
             AddLine("this.faces = [");
             offset++;
-            foreach (var t in triangles)
+            foreach (var t in Triangles)
             {
                 AddLine(t.ToString() + ",");
             }
             offset--;
             AddLine("];");
 
-            return builder.ToString();
+            File.WriteAllText(dstPath, builder.ToString());
         }
     }
 }

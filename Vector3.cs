@@ -4,6 +4,10 @@ namespace ObjToMtrxMesh
 {
     public struct Vector3
     {
+        public float x;
+        public float y;
+        public float z;
+
         public Vector3(float x, float y, float z)
         {
             this.x = x;
@@ -15,9 +19,5 @@ namespace ObjToMtrxMesh
         {
             return string.Format(CultureInfo.InvariantCulture, "new Vector({0}, {1}, {2})", x, y, z);
         }
-
-        public float x;
-        public float y;
-        public float z;
     };
 }

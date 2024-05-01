@@ -3,6 +3,8 @@ namespace ObjToMtrxMesh
 {
     public struct Triangle
     {
+        List<int> Indices;
+
         public Triangle(List<int> Indices)
         {
             this.Indices = Indices;
@@ -12,7 +14,5 @@ namespace ObjToMtrxMesh
         {
             return string.Format("[{0}]", String.Join(", ", Indices));
         }
-
-        List<int> Indices;
     }
 }
