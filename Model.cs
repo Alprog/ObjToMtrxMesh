@@ -7,14 +7,14 @@ namespace ObjToMtrxMesh
     public class Model
     {
         private List<Vector3> Vertices;
-        private List<Triangle> Triangles;
+        private List<Face> Faces;
         private Dictionary<string, Material> Materials;
         private Material CurrentMaterial;
 
         public Model()
         {
             Vertices = new List<Vector3>();
-            Triangles = new List<Triangle>();
+            Faces = new List<Face>();
             Materials = new Dictionary<string, Material>();
         }
 
@@ -23,7 +23,7 @@ namespace ObjToMtrxMesh
             var lines = File.ReadAllLines(objPath);
             foreach (var line in lines)
             {
-                var arr = line.Split(' ');
+                var arr = line.Trim().Split(' ');
                 if (arr[0] == "v")
                 {
                     var x = float.Parse(arr[1].Replace('.', ','));
@@ -39,7 +39,7 @@ namespace ObjToMtrxMesh
                     {
                         list.Add(int.Parse(arr[i].Split('/')[0]) - 1);
                     }
-                    Triangles.Add(new Triangle(list));
+                    Faces.Add(new Face(list, CurrentMaterial));
                 }
 
                 if (arr[0] == "mtllib")
@@ -61,11 +61,11 @@ namespace ObjToMtrxMesh
             Material current = null;   
             foreach (var line in File.ReadAllLines(mtlPath))
             {
-                var arr = line.Split(' ');
+                var arr = line.Trim().Split(' ');
                 if (arr[0] == "newmtl")
                 {
                     var name = arr[1];
-                    current = new Material(name);
+                    current = new Material(name, Materials.Count);
                     Materials.Add(name, current);
                 }
                 else if (current != null)
@@ -77,6 +77,9 @@ namespace ObjToMtrxMesh
 
         public void SaveMtrxMesh(string dstPath)
         {
+            var className = Path.GetFileNameWithoutExtension(dstPath);
+            className = Char.ToUpper(className[0]) + className.Substring(1);
+
             var builder = new StringBuilder();
             var offset = 0;
 
@@ -88,23 +91,45 @@ namespace ObjToMtrxMesh
                 builder.AppendLine(s);
             };
 
+            AddLine("class " + className + " extends Mesh");
+            AddLine("{");
+            offset++;
+            AddLine("constructor()");
+            AddLine("{");
+            offset++;
+            AddLine("super();");
+
             AddLine("this.vertices = [");
             offset++;
-            foreach (var v in Vertices)
+            foreach (var vertex in Vertices)
             {
-                AddLine(v.ToString() + ",");
+                AddLine(vertex.ToString() + ",");
+            }
+            offset--;
+            AddLine("];");
+
+            AddLine("this.materials = [");
+            offset++;
+            foreach (var material in Materials.Values)
+            {
+                AddLine(material.ToString() + ",");
             }
             offset--;
             AddLine("];");
 
             AddLine("this.faces = [");
             offset++;
-            foreach (var t in Triangles)
+            foreach (var face in Faces)
             {
-                AddLine(t.ToString() + ",");
+                AddLine(face.ToString() + ",");
             }
             offset--;
             AddLine("];");
+
+            offset--;
+            AddLine("}");
+            offset--;
+            AddLine("};");
 
             File.WriteAllText(dstPath, builder.ToString());
         }

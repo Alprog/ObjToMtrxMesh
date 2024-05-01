@@ -20,7 +20,7 @@ namespace ObjToMtrxMesh
 
         public static void Main()
         {
-            ProcessFolder("C:\\Users\\alpro\\Desktop\\Little");           
+            ProcessFolder("C:\\alprog.github.io\\mtrx\\models");
         }
     }
 }
